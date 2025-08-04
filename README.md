@@ -1,7 +1,7 @@
 # ⚡ Layer-wise Energy Profiling of Deep Learning Models on Jetson Nano
 
-This project performs **real-time, layer-wise power and energy profiling** of deep learning models (e.g., VGG11) during inference on **NVIDIA Jetson** devices (Nano/Xavier).
-It uses `jtop` for live telemetry, isolates each layer, and exports detailed metrics and visualizations — making it ideal for edge AI energy optimization.
+This project performs **real-time, layer-wise power and energy profiling** of deep learning models (e.g., VGG11) during inference on **NVIDIA Jetson** devices Nano.
+It uses `jtop` for live telemetry, isolates each layer, and exports detailed metrics and visualizations making it ideal for edge AI energy optimization.
 
 ---
 
