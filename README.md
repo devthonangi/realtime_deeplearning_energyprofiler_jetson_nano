@@ -1,96 +1,93 @@
-# Layer-wise Energy Profiling of Deep Learning Models on Jetson Nano
+# ⚡ Layer-wise Energy Profiling of Deep Learning Models on Jetson Nano
 
-This project performs **layer-wise energy and power profiling** of deep learning models (e.g., VGG11) during **inference** on NVIDIA Jetson devices. It uses `jtop` to monitor live power telemetry and attributes energy consumption to individual layers.
-
----
-
-##  Supported Deep Learning Model
-
-This setup supports any PyTorch model with a sequential or decomposable structure. By default, it uses:
-
-```python
-torchvision.models.vgg11(pretrained=True)
-```
+This project performs **real-time, layer-wise power and energy profiling** of deep learning models (e.g., VGG11) during inference on **NVIDIA Jetson** devices (Nano/Xavier).
+It uses `jtop` for live telemetry, isolates each layer, and exports detailed metrics and visualizations — making it ideal for edge AI energy optimization.
 
 ---
 
-##  Methodology
+## 🧠 Supported Deep Learning Models
 
-###  1. Layer Isolation
+* Any **PyTorch** model with a **sequential or decomposable structure**.
+* Default:
 
-* Each layer (e.g., `Conv2d`, `ReLU`, `Linear`) is isolated and executed **independently**.
-* Input tensors for each layer are captured using **forward hooks** during a dry run.
-* This ensures that only one layer runs during profiling, and its energy usage is measured accurately.
-
----
-
-###  2. Real-Time Power Sampling with `jtop`
-
-* `jtop` is used to read `Power TOT`, which represents total board power usage.
-* A **background thread** samples power values at a fixed `POLL_INTERVAL` (e.g., 0.02s).
-* Only the power readings captured **during layer execution** are considered.
-
----
-
-###  3. Repeated Inference for Stability
-
-* Each layer is executed **`NUM_REPEATS` times (e.g., 100)**.
-* This reduces measurement noise and smooths out transient hardware fluctuations.
-* Ensures more stable and representative power data per layer.
-
----
-
-###  4. Energy and Power Calculation
-
-* Duration is calculated using `time.monotonic()` before and after the loop.
-
-* **Energy (Joules)** is computed as:
-
-  ```
-  Energy = sum(Power samples) × Poll Interval
+  ```python
+  torchvision.models.vgg11(pretrained=True)
   ```
 
-* **Average Power (Watt)** is calculated as:
+---
+
+## 🔧 Methodology
+
+### 1. Layer Isolation
+
+* Each layer (e.g., `Conv2d`, `ReLU`, `Linear`) is isolated and executed independently.
+* Input tensors are **pre-captured** using forward hooks during a dry run.
+* This enables **accurate, per-layer energy attribution**.
+
+### 2. Real-Time Power Sampling with `jtop`
+
+* `jtop` provides access to **Power TOT** (total board power).
+* A background thread samples power at a fixed `POLL_INTERVAL` (e.g., 0.02s).
+* Only samples during the layer’s execution are recorded.
+
+### 3. Repeated Inference for Stability
+
+* Each layer is run `NUM_REPEATS` times (e.g., 100) to:
+
+  * Smooth out noise
+  * Ensure reproducibility
+  * Capture stable power metrics
+
+### 4. Energy & Power Calculation
+
+For each layer:
+
+* **Duration** = `end - start`
+* **Energy (J)** =
+
+  $$
+  \sum (\text{Power sample} \times \text{Poll Interval})
+  $$
+* **Average Power (W)** =
+
+  $$
+  \text{Energy} / \text{Duration}
+  $$
+
+  (Physics-consistent: $E = P \times T$)
+
+### 5. Data Logging & Visualization
+
+* All raw samples are logged in:
 
   ```
-  Avg Power = Energy / Duration
+  vgg11_layerwise_energy_full.csv
+  ```
+* A bar chart of **energy per layer** is saved as:
+
+  ```
+  vgg11_layerwise_energy_plot.png
   ```
 
-* This is consistent with the physics principle:
-  `E = P × T`
+---
+
+## ✅ Why This Is Accurate and Useful
+
+* 🟢 **Live telemetry** from Jetson's `jtop` (software-level power interface)
+* 🟢 Each layer profiled **in isolation**
+* 🟢 Real input tensors used
+* 🟢 Accurate attribution of power to **specific model components**
+* 🟢 Detects **energy hotspots** to help you optimize for deployment
 
 ---
 
-###  5. Data Logging and Visualization
-
-* All **raw power samples per layer** are stored in:
-  `vgg11_layerwise_energy_full.csv`
-
-* A **bar chart** is generated showing:
-
-  * Energy consumed per layer (J)
-  * Chart saved as:
-    `vgg11_layerwise_energy_plot.png`
-
----
-
-##  Why This is Accurate and Useful
-
-* Power telemetry is accessed **in real time** using `jtop` (via Jetson's internal software interface).
-* Each layer is run **in isolation with real input tensors**.
-* Power usage is linked directly to that specific layer.
-* Helps identify **energy hotspots** in the model and optimize performance for **edge/embedded deployment**.
-
----
-
-## Sample Output
+## 🔢 Sample Output
 
 ```
 ===== Layer-wise Profiling (VGG11) =====
 Conv2d_0: Duration=2.45s | Energy=18.51J | Avg Power=7.57W
 ReLU_1:   Duration=0.71s | Energy=3.65J  | Avg Power=5.16W
 ...
-
 ===== Total Summary =====
 Total Duration: 38.2 s
 Total Energy:   227.2 J
@@ -99,21 +96,94 @@ Avg Total Power: 5.93 W
 
 ---
 
-## Requirements
+## 📊 Live Power Monitoring with Prometheus & Grafana
 
-* NVIDIA Jetson device (Nano, Xavier, etc.)
-* Python 3.8+
-* PyTorch, torchvision
-* `jtop` (install with: `sudo pip install jetson-stats`)
+This project also supports **real-time dashboards** via Prometheus + Grafana!
+
+### 🔁 What It Does
+
+* A Prometheus **exporter** reads power from `jtop` and exposes it at `http://<jetson-ip>:8000/metrics`
+* **Prometheus** scrapes this data
+* **Grafana** visualizes live power trends, inference stages, and energy usage
+
+### 🛠 How To Set It Up
+
+#### 1. Export Jetson Power
+
+```bash
+sudo pip install prometheus_client jetson-stats
+python3 export_power.py
+```
+
+#### 2. Prometheus Config (`prometheus.yml`)
+
+```yaml
+scrape_configs:
+  - job_name: 'jetson_power'
+    static_configs:
+      - targets: ['<jetson-ip>:8000']
+```
+
+Then:
+
+```bash
+./prometheus --config.file=prometheus.yml
+```
+
+#### 3. Grafana Dashboard
+
+* Add Prometheus as a **data source**
+* Create panels using:
+
+  ```
+  jetson_power_total_watts
+  ```
+* Plot energy as:
+
+  ```
+  increase(jetson_power_total_watts[60s]) * 60
+  ```
+
+> Optional files:
+
+```
+grafana_dashboard.json   # Prebuilt Grafana layout
+export_power.py          # Exporter script
+prometheus.yml           # Config
+```
 
 ---
 
-##  How to Run
+
+## 🔃 How to Run
 
 ```bash
 sudo nvpmodel -m 0
 sudo jetson_clocks
 sudo python3 p.py
 ```
+
+---
+
+## 🧩 Requirements
+
+* ✅ NVIDIA Jetson Nano / Xavier / TX2
+* ✅ Python ≥ 3.8
+* ✅ PyTorch + torchvision
+* ✅ [jetson-stats](https://github.com/rbonghi/jetson-stats):
+
+  ```bash
+  sudo pip install jetson-stats
+  ```
+
+---
+
+## 🧠 Applications
+
+* 🔋 Edge AI energy debugging
+* 🧪 Energy benchmarking: FP32 vs TensorRT
+* 🔎 Model compression or pruning evaluation
+* 📉 Identifying inefficient layers
+* 🖥️ Visual dashboards with Grafana
 
 ---
