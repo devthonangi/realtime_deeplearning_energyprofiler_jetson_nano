@@ -20,7 +20,7 @@ It uses `jtop` for live telemetry, isolates each layer, and exports detailed met
 
 ### 1. Layer Isolation
 
-* Each layer (e.g., `Conv2d`, `ReLU`, `Linear`) is isolated and executed independently.
+* Each layer (e.g., Conv2d, ReLU, Linear) is isolated and executed independently during inference.
 * Input tensors are **pre-captured** using forward hooks during a dry run.
 * This enables **accurate, per-layer energy attribution**.
 
@@ -73,11 +73,17 @@ For each layer:
 
 ## ✅ Why This Is Accurate and Useful
 
-* 🟢 **Live telemetry** from Jetson's `jtop` (software-level power interface)
-* 🟢 Each layer profiled **in isolation**
-* 🟢 Real input tensors used
-* 🟢 Accurate attribution of power to **specific model components**
-* 🟢 Detects **energy hotspots** to help you optimize for deployment
+* 🟢 Real-time power telemetry from Jetson's onboard software interface (jtop)
+
+* 🟢 Each layer is profiled in isolation during inference
+
+* 🟢 Real input tensors from the model’s forward pass are used
+
+* 🟢 Power usage is directly attributed to individual layers
+
+* 🟢 Great for identifying inference-time bottlenecks and inefficiencies
+
+
 
 ---
 
@@ -180,10 +186,10 @@ sudo python3 p.py
 
 ## 🧠 Applications
 
-* 🔋 Edge AI energy debugging
-* 🧪 Energy benchmarking: FP32 vs TensorRT
-* 🔎 Model compression or pruning evaluation
-* 📉 Identifying inefficient layers
+* 🔋 Optimize inference-time energy consumption for embedded deployment
+* 🔎 Identify inefficient layers in real-time AI pipelines
+* ⚙️ Evaluate runtime behavior of TensorRT vs PyTorch inference
+* 📉 Benchmark low-power model variants (quantized, pruned, etc.)
 * 🖥️ Visual dashboards with Grafana
 
 ---
